@@ -1,0 +1,66 @@
+% Define the known vectors D (fractal dimensions) and t (years)
+D = [1.503, 1.599, 1.634, 1.708, 1.709]
+t = [2000, 2011, 2020, 2050, 2100]
+
+
+% Fractal dimension at time t0
+D0 = D(1)
+% First year being considered
+t0 = t(1)
+
+% Define function D(t)
+funD = @(x,t) x(1) ./ (1 + ( (x(1)/D0 - 1 ) * exp( -x(2)*(t-t0) ) ))
+
+% Define the objective function for minimization
+objective = @(x) sum( ...
+ ( D - funD(x,t) ).^2 ...
+ );
+
+% Define the initial guess for Dmax and k
+x0 = [2, 0.05];
+
+% Set the lower and upper bounds for Dmax and k
+lb = [max(D), 0];
+ub = [2, Inf];
+
+% Define the constraints
+A = [];
+b = [];
+Aeq = [];
+beq = [];
+
+% Perform the optimization with increased iterations
+options = optimoptions('fmincon', 'Display', 'iter', 'MaxIterations', 50000);
+[x_opt, fval] = fmincon(objective, x0, A, b, Aeq, beq, lb, ub, [], options);
+
+% Extract the optimized values
+Dmax_opt = x_opt(1);
+k_opt = x_opt(2);
+
+% Calculate the predicted values
+Dhat = funD([Dmax_opt,k_opt],t);
+
+% Calculate determination coefficient (R-squared)
+% See: https://fr.mathworks.com/help/curvefit/evaluating-goodness-of-fit.html
+% https://www.ncl.ac.uk/webtemplate/ask-assets/external/maths-resources/statistics/regression-and-correlation/coefficient-of-determination-r-squared.html
+SST = sum((D - mean(D)).^2);
+SSR = sum((D - Dhat).^2);
+R2 = 1 - SSR/SST;
+
+% Display the optimized values and the corresponding least square residual error
+disp(['Optimized Dmax: ', num2str(Dmax_opt)]);
+disp(['Optimized k: ', num2str(k_opt)]);
+disp(['Determination coefficient (R-square): ', num2str(R2)]);
+disp(['Least square residual error: ', num2str(fval)]);
+
+
+
+% Plot D vs. t (data1 - blue) and D predicted vs. t (data2 - red)
+figure
+plot(t,D, ...
+ t,funD([Dmax_opt,k_opt],t), ...
+ '--','lineWidth', 2)
+legend
+
+
+
